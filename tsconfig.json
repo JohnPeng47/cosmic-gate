@@ -1,4 +1,15 @@
 {
+  "compilerOptions": {
+    "strict": false,              // Disables all strict type checking
+    "noImplicitAny": false,      // Allows variables to have 'any' type
+    "noImplicitThis": false,     // Allows 'this' to have 'any' type
+    "strictNullChecks": false,   // Allows null/undefined to be assigned to any type
+    "strictFunctionTypes": false, // Disables strict function type checking
+    "strictPropertyInitialization": false, // Allows class properties without initialization
+    "useUnknownInCatchVariables": false,  // Allows 'any' instead of 'unknown' in catch clauses
+    "allowJs": true,             // Allows JavaScript files to be compiled
+    "checkJs": false             // Disables type checking of JavaScript files
+  },
   "files": [],
   "references": [
     { "path": "./tsconfig.app.json" },

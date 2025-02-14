@@ -1,6 +1,5 @@
-import React from 'react';
 import { Box } from '@mui/material';
-
+import SimComponent from '../components/simComponent';
 const HomePage = () => {
   return (
     <Box sx={{ flexGrow: 1, height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -43,7 +42,7 @@ const HomePage = () => {
             overflow: 'auto'
           }}
         >
-          Canvas
+          <SimComponent />
         </Box>
       </Box>
     </Box>
