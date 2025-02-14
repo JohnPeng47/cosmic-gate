@@ -19,8 +19,24 @@ const NBodySimulation: React.FC<NBodySimulationProps> = ({ bodies }) => {
   const nameDisplayRef = useRef<HTMLDivElement>(null);
   const cameraDisplayRef = useRef<HTMLDivElement>(null);
 
+  const translateCoordinates = (
+    x: number,
+    y: number,
+    rect: DOMRect
+  ) => {
+    // Get current scroll position
+    const scrollX = window.scrollX || window.pageXOffset;
+    const scrollY = window.scrollY || window.pageYOffset;
+    
+    return {
+      x: x - rect.left + scrollX,  // Add scrollX to account for horizontal scroll
+      y: y - rect.top + scrollY    // Add scrollY to account for vertical scroll
+    };
+  }
+
   useEffect(() => {
     // Set up scene, camera, and renderer.
+    
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
       60,
@@ -28,6 +44,7 @@ const NBodySimulation: React.FC<NBodySimulationProps> = ({ bodies }) => {
       0.1,
       1000
     );
+    
     camera.position.set(0, 50, 50);
     camera.lookAt(0, 0, 0);
 
@@ -35,7 +52,10 @@ const NBodySimulation: React.FC<NBodySimulationProps> = ({ bodies }) => {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
     containerRef.current?.appendChild(renderer.domElement);
+    // get bbox of canvas
+    const rect = renderer.domElement.getBoundingClientRect();
 
+    
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.target.set(0, 0, 0);
     controls.update();
@@ -275,8 +295,10 @@ const NBodySimulation: React.FC<NBodySimulationProps> = ({ bodies }) => {
     };
 
     const onMouseMove = (event: MouseEvent) => {
-      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      const { x, y } = translateCoordinates(event.clientX, event.clientY, rect);
+      mouse.x = (x / window.innerWidth) * 2 - 1;
+      mouse.y = -(y / window.innerHeight) * 2 + 1;
+      
       raycaster.setFromCamera(mouse, camera);
       const intersects = raycaster.intersectObjects(
         simulationBodies.map((body) => body.mesh),
@@ -304,8 +326,10 @@ const NBodySimulation: React.FC<NBodySimulationProps> = ({ bodies }) => {
 
     const onClick = (event: MouseEvent) => {
       if (isTransitioning) return;
-      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      const { x, y } = translateCoordinates(event.clientX, event.clientY, rect);
+      mouse.x = (x / window.innerWidth) * 2 - 1;
+      mouse.y = -(y / window.innerHeight) * 2 + 1;
+
       raycaster.setFromCamera(mouse, camera);
       const intersects = raycaster.intersectObjects(
         simulationBodies.map((body) => body.mesh),
@@ -317,6 +341,7 @@ const NBodySimulation: React.FC<NBodySimulationProps> = ({ bodies }) => {
           mesh = mesh.parent;
         }
         const clickedBody = simulationBodies.find((body) => body.mesh === mesh);
+        console.log("CLicked: ", clickedBody);
         if (clickedBody) {
           zoomToSphere(clickedBody);
         }
