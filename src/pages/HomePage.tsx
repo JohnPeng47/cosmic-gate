@@ -7,7 +7,7 @@ const HomePage = () => {
       <Box 
         sx={{ 
           height: '64px', 
-          bgcolor: '#2196f3',
+          bgcolor: '#ffffff',
           width: '100%'
         }}
       >
@@ -20,28 +20,8 @@ const HomePage = () => {
         flexGrow: 1,
         overflow: 'hidden'
       }}>
-        {/* Side Menu */}
-        <Box 
-          sx={{ 
-            width: '240px',
-            bgcolor: '#4caf50',
-            flexShrink: 0,
-            height: '100%'
-          }}
-        >
-          Side Menu
-        </Box>
-
         {/* Canvas/Main Content Area */}
-        <Box 
-          sx={{ 
-            flexGrow: 1,
-            bgcolor: '#ff9800',
-            p: 3,
-            height: '100%',
-            overflow: 'auto'
-          }}
-        >
+        <Box >
           <SimComponent />
         </Box>
       </Box>

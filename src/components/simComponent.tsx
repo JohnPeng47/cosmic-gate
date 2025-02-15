@@ -38,7 +38,7 @@ const SimComponent: React.FC = () => {
   const bodies: SimBody[] = [centralBody, ...planets];
 
   return (
-    <div>
+    <div style={{ width: '100%', height: '100%' }}>
       <NBodySimulation bodies={bodies} />
     </div>
   );
