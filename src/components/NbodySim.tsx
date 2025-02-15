@@ -20,7 +20,7 @@ const NBodySimulation: React.FC<NBodySimulationProps> = ({ bodies }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const nameDisplayRef = useRef<HTMLDivElement>(null);
   const cameraDisplayRef = useRef<HTMLDivElement>(null);
-  let loadedFont = useRef<Font | null>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
 
   const translateCoordinates = (
     x: number,
@@ -36,22 +36,6 @@ const NBodySimulation: React.FC<NBodySimulationProps> = ({ bodies }) => {
       y: y - rect.top + scrollY    // Add scrollY to account for vertical scroll
     };
   }
-
-  useEffect(() => {
-    const loadFont = async () => {
-      console.log("RUNNING 1")
-      const fontLoader = new FontLoader();
-      loadedFont.current = await new Promise<Font>((resolve, reject) => {
-        fontLoader.load(
-          'https://threejs.org/examples/fonts/helvetiker_regular.typeface.json',
-          (font) => resolve(font),
-          undefined,
-          (error) => reject(error)
-        );
-      });
-    };
-    loadFont();
-  }, []);
 
   useEffect(() => {
     async function initSimulation() {
@@ -76,19 +60,19 @@ const NBodySimulation: React.FC<NBodySimulationProps> = ({ bodies }) => {
       camera.position.set(0, 50, 50);
       camera.lookAt(0, 0, 0);
 
-      const renderer = new THREE.WebGLRenderer({ 
-        antialias: true, 
-        alpha: true,
-      });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(window.devicePixelRatio * 1.5);
+      if (!rendererRef.current) {
+        rendererRef.current = new THREE.WebGLRenderer({ 
+          antialias: true, 
+          alpha: true,
+        });
+        rendererRef.current.setSize(window.innerWidth, window.innerHeight);
+        rendererRef.current.setPixelRatio(window.devicePixelRatio * 1.5);
+        containerRef.current?.appendChild(rendererRef.current.domElement);
+      }
 
-      containerRef.current?.appendChild(renderer.domElement);
       // get bbox of canvas
-      const rect = renderer.domElement.getBoundingClientRect();
-
-      
-      const controls = new OrbitControls(camera, renderer.domElement);
+      const rect = rendererRef.current.domElement.getBoundingClientRect();
+      const controls = new OrbitControls(camera, rendererRef.current.domElement);
       controls.target.set(0, 0, 0);
       controls.update();
 
@@ -393,14 +377,14 @@ const NBodySimulation: React.FC<NBodySimulationProps> = ({ bodies }) => {
         }
         updateCameraDisplay();
         controls.update();
-        renderer.render(scene, camera);
+        rendererRef.current!.render(scene, camera);
       };
       animationFrameId = requestAnimationFrame(animate);
 
       const onWindowResize = () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        rendererRef.current!.setSize(window.innerWidth, window.innerHeight);
       };
       window.addEventListener("mousemove", onMouseMove, false);
       window.addEventListener("click", onClick, false);
@@ -411,10 +395,10 @@ const NBodySimulation: React.FC<NBodySimulationProps> = ({ bodies }) => {
         window.removeEventListener("click", onClick);
         window.removeEventListener("resize", onWindowResize);
           //   cancelAnimationFrame(animationFrameId);
-        if (containerRef.current && renderer.domElement) {
-          containerRef.current.removeChild(renderer.domElement);
+        if (containerRef.current && rendererRef.current!.domElement) {
+          containerRef.current.removeChild(rendererRef.current!.domElement);
         }
-        renderer.dispose();
+        rendererRef.current!.dispose();
       };
 
     }
