@@ -1,3 +1,5 @@
+// NBodySimulation.tsx
+
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 // @ts-expect-error - OrbitControls is not defined in the types
@@ -17,32 +19,19 @@ interface SimulationBody extends SimBody {
   haloMaterial: THREE.ShaderMaterial;
 }
 
-// Constants
 const G = 2;
 const dt = 0.01;
 const TRANSITION_DURATION = 1000; // in milliseconds
 
-/**
- * Helper: Translate browser coordinates to canvas coordinates
- */
-function translateCoordinates(
-  x: number,
-  y: number,
-  rect: DOMRect
-) {
-  // Get current scroll position
+function transCanvasToWindow(x: number, y: number, rect: DOMRect) {
   const scrollX = window.scrollX || window.pageXOffset;
   const scrollY = window.scrollY || window.pageYOffset;
-
   return {
     x: x - rect.left + scrollX,
     y: y - rect.top + scrollY,
   };
 }
 
-/**
- * Helper: Linear interpolation between two Vector3s (with a custom ease).
- */
 function lerpVector3(
   start: THREE.Vector3,
   end: THREE.Vector3,
@@ -55,10 +44,6 @@ function lerpVector3(
   );
 }
 
-/**
- * Initialization & animation of the 3D scene, camera, controls, physics, and events.
- * Returns a cleanup function to remove event listeners & dispose resources.
- */
 async function initSimulation(
   container: HTMLDivElement | null,
   nameDisplay: HTMLDivElement | null,
@@ -70,7 +55,6 @@ async function initSimulation(
 
   const scene = new THREE.Scene();
 
-  // Setup camera
   const camera = new THREE.PerspectiveCamera(
     60,
     window.innerWidth / window.innerHeight,
@@ -80,7 +64,6 @@ async function initSimulation(
   camera.position.set(0, 50, 50);
   camera.lookAt(0, 0, 0);
 
-  // Load font asynchronously
   const fontLoader = new FontLoader();
   const loadedFont = await new Promise<Font>((resolve, reject) => {
     fontLoader.load(
@@ -91,7 +74,6 @@ async function initSimulation(
     );
   });
 
-  // Setup renderer (if not already defined)
   if (!rendererRef.current) {
     rendererRef.current = new THREE.WebGLRenderer({
       antialias: true,
@@ -102,35 +84,34 @@ async function initSimulation(
     container.appendChild(rendererRef.current.domElement);
   }
 
-  // Controls
   const controls = new OrbitControls(camera, rendererRef.current.domElement);
   controls.target.set(0, 0, 0);
   controls.update();
 
-  // Raycaster
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
 
-  // Local references for transitions
+  // Camera transition & zoom logic
   let isAnimationPaused = false;
   let isTransitioning = false;
   let transitionStartTime = 0;
+
   let originalCameraPosition: THREE.Vector3 | null = null;
   let originalCameraTarget: THREE.Vector3 | null = null;
   let targetCameraPosition = new THREE.Vector3();
   let targetCameraTarget = new THREE.Vector3();
 
-  // Simulation bodies
-  const simulationBodies: SimulationBody[] = [];
+  // Keep track of which body we want to show in 2D once the camera has reached the final position
+  let zoomedBodyRef: SimulationBody | null = null;
+
+  // Store & set data in zustand
   const { setZoomedInBody } = useNBodyStore.getState();
 
-  /**
-   * Create a 3D body (mesh + halo + text) from SimBody data.
-   */
+  const simulationBodies: SimulationBody[] = [];
+
   function createBody(body: SimBody): SimulationBody {
     const { position, radius, color, name } = body;
 
-    // Sphere geometry & material
     const sphereGeometry = new THREE.SphereGeometry(radius, 32, 32);
     const sphereMaterial = new THREE.MeshBasicMaterial({
       color,
@@ -140,7 +121,6 @@ async function initSimulation(
     const sphereMesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
     sphereMesh.position.copy(position);
 
-    // Halo effect
     const haloGeometry = new THREE.SphereGeometry(radius * 2, 50, 50);
     const haloMaterial = new THREE.ShaderMaterial({
       uniforms: {
@@ -204,7 +184,6 @@ async function initSimulation(
     textMesh.position.set(0, radius * 2, 0);
     textMesh.geometry.translate(-textWidth / 2, 0, 0);
 
-    // Combine mesh & text
     sphereMesh.add(textMesh);
     sphereMesh.add(haloMesh);
     scene.add(sphereMesh);
@@ -212,14 +191,11 @@ async function initSimulation(
     return {
       ...body,
       mesh: sphereMesh,
-      textMesh: textMesh,
+      textMesh,
       haloMaterial,
     };
   }
 
-  /**
-   * Update positions and velocities of bodies based on gravitational forces.
-   */
   function updatePhysics() {
     for (let i = 0; i < simulationBodies.length; i++) {
       const bodyA = simulationBodies[i];
@@ -232,7 +208,7 @@ async function initSimulation(
           bodyB.position,
           bodyA.position
         );
-        // Only 2D in x/z plane in the original code
+        // Only 2D in x/z plane
         const distanceSq = direction.x * direction.x + direction.z * direction.z;
         const distance = Math.sqrt(distanceSq) + 0.1;
         direction.normalize();
@@ -250,24 +226,24 @@ async function initSimulation(
     });
   }
 
-  /**
-   * Smoothly update the camera position/target during transitions.
-   */
   function updateCameraTransition(currentTime: number) {
-    if (!isTransitioning || !originalCameraPosition || !originalCameraTarget) return;
+    if (!isTransitioning || !originalCameraPosition || !originalCameraTarget)
+      return;
+
     const elapsed = currentTime - transitionStartTime;
     const progress = Math.min(elapsed / TRANSITION_DURATION, 1);
 
-    // Simple ease in-out approach
+    // Ease in-out
     const alpha =
       progress < 0.5
         ? 2 * progress * progress
+        // gurantees that alpha will end at 1 at TRANSITION_DURATION
         : -1 + (4 - 2 * progress) * progress;
 
-    if (progress >= 1) {
-      isTransitioning = false;
-    }
+    // this will print 60 times at 60fps for browser animation
+    // console.log("Elapsed: ", elapsed, "Progress: ", progress, "alpha: ", alpha);
 
+    // Lerp the camera position & target
     const newPosition = lerpVector3(
       originalCameraPosition,
       targetCameraPosition,
@@ -282,6 +258,30 @@ async function initSimulation(
     camera.position.copy(newPosition);
     controls.target.copy(newTarget);
     controls.update();
+
+    if (progress >= 1) {
+      // Camera finished moving
+      isTransitioning = false;
+      // If we have a zoomedBodyRef, now is the perfect time to project it
+      if (zoomedBodyRef) {
+        // 1) Use the real camera
+        const finalBodyPos = zoomedBodyRef.position.clone();
+
+        // 2) Convert from 3D to normalized device coords
+        finalBodyPos.project(camera);
+
+        // 3) Convert from -1..+1 to actual screen coordinates
+        const newX = (finalBodyPos.x + 1) * 0.5 * window.innerWidth;
+        const newY = (-finalBodyPos.y + 1) * 0.5 * window.innerHeight;
+
+        setZoomedInBody({
+          name: zoomedBodyRef.name,
+          mouseClick: { x: newX, y: newY },
+        });
+
+        zoomedBodyRef = null; // Clear so we don't do it multiple times
+      }
+    }
   }
 
   function zoomToSphere(body: SimulationBody) {
@@ -291,42 +291,37 @@ async function initSimulation(
     originalCameraPosition = camera.position.clone();
     originalCameraTarget = controls.target.clone();
 
-    // Arbitrary offset & camera distance
+    // We'll remember which body we zoomed to, so we can do the 2D projection after transition
+    zoomedBodyRef = body;
+
     const SCALE = 4;
-    const offset = new THREE.Vector3(SCALE * 6.11, SCALE * -1.33, SCALE * 7.89);
-    targetCameraTarget = body.position.clone().add(offset);
+    const offsetVec = new THREE.Vector3(SCALE * 6.11, SCALE * -1.33, SCALE * 7.89);
 
-    const offsetDir = offset.clone().normalize();
+    targetCameraTarget = body.position.clone().add(offsetVec);
+
+    const offsetDir = offsetVec.clone().normalize();
     const up = new THREE.Vector3(0, 1, 0);
-    const perpendicular = new THREE.Vector3().crossVectors(offsetDir, up).normalize();
-    const cameraDistance = offset.length();
-    targetCameraPosition = body.position
-      .clone()
-      .add(perpendicular.multiplyScalar(cameraDistance));
+    const perpendicular = new THREE.Vector3()
+      .crossVectors(offsetDir, up)
+      .normalize();
+    const cameraDistance = offsetVec.length();
+    targetCameraPosition = body.position.clone().add(
+      perpendicular.multiplyScalar(cameraDistance)
+    );
 
-    // Reduce opacity for other bodies
+    // Hide other bodies
     simulationBodies.forEach((otherBody) => {
       if (otherBody.name !== body.name) {
         otherBody.mesh.visible = false;
       }
     });
-
-    // TODO: this doesn't work well
-    // rotate text mesh to face the camera
-    body.textMesh.rotation.y = Math.atan2(
-      targetCameraPosition.x - body.textMesh.position.x,
-      targetCameraPosition.z - body.textMesh.position.z
-    );
   }
 
-  /**
-   * Reset camera position/target and restore body opacities.
-   */
   function resetView() {
     if (!originalCameraPosition || !originalCameraTarget) return;
     isTransitioning = true;
     transitionStartTime = performance.now();
-    // Swap targets (so we can lerp back)
+
     targetCameraPosition = originalCameraPosition;
     targetCameraTarget = originalCameraTarget;
     originalCameraPosition = camera.position.clone();
@@ -337,18 +332,16 @@ async function initSimulation(
     });
 
     isAnimationPaused = false;
-    // Clear the store's zoomed–in body if needed
     setZoomedInBody(null);
+    zoomedBodyRef = null;
   }
 
-  // Create bodies
   simulationBodies.push(...bodies.map(createBody));
 
-  // Event handlers
   const rect = rendererRef.current.domElement.getBoundingClientRect();
 
   function onMouseMove(event: MouseEvent) {
-    const { x, y } = translateCoordinates(event.clientX, event.clientY, rect);
+    const { x, y } = transCanvasToWindow(event.clientX, event.clientY, rect);
     mouse.x = (x / window.innerWidth) * 2 - 1;
     mouse.y = -(y / window.innerHeight) * 2 + 1;
 
@@ -365,7 +358,7 @@ async function initSimulation(
       while (mesh.parent && mesh.parent.type !== 'Scene') {
         mesh = mesh.parent;
       }
-      const hoveredBody = simulationBodies.find((body) => body.mesh === mesh);
+      const hoveredBody = simulationBodies.find((b) => b.mesh === mesh);
       if (hoveredBody && nameDisplay) {
         hoveredBody.haloMaterial.uniforms.isHovered.value = 1.0;
         nameDisplay.innerText = hoveredBody.name;
@@ -377,7 +370,7 @@ async function initSimulation(
 
   function onClick(event: MouseEvent) {
     if (isTransitioning) return;
-    const { x, y } = translateCoordinates(event.clientX, event.clientY, rect);
+    const { x, y } = transCanvasToWindow(event.clientX, event.clientY, rect);
     mouse.x = (x / window.innerWidth) * 2 - 1;
     mouse.y = -(y / window.innerHeight) * 2 + 1;
 
@@ -386,29 +379,17 @@ async function initSimulation(
       simulationBodies.map((body) => body.mesh),
       true
     );
+
     if (intersects.length > 0 && !isAnimationPaused) {
       let mesh: THREE.Object3D = intersects[0].object;
       while (mesh.parent && mesh.parent.type !== 'Scene') {
         mesh = mesh.parent;
       }
-      const clickedBody = simulationBodies.find((body) => body.mesh === mesh);
+      const clickedBody = simulationBodies.find((b) => b.mesh === mesh);
       if (clickedBody) {
-        console.log("Zooming to body", {
-          name: clickedBody.name,
-          mouseClick: {
-            x: x,
-            y: y,
-          },
-        });
-
+        // We do NOT call setZoomedInBody here with projected coords.
+        // Instead, we'll do that in updateCameraTransition once the camera is done.
         zoomToSphere(clickedBody);
-        setZoomedInBody({
-          name: clickedBody.name,
-          mouseClick: {
-            x: x,
-            y: y,
-          },
-        });
       }
     } else if (isAnimationPaused) {
       resetView();
@@ -430,10 +411,10 @@ async function initSimulation(
   Z: ${pos.z.toFixed(2)}`;
   }
 
-  // Animation loop
   let animationFrameId: number;
   function animate(currentTime: number) {
     animationFrameId = requestAnimationFrame(animate);
+
     if (isTransitioning) {
       updateCameraTransition(currentTime);
     }
@@ -444,7 +425,7 @@ async function initSimulation(
     controls.update();
     rendererRef.current!.render(scene, camera);
 
-    // Update all text meshes to face the camera on the y-axis only
+    // Billboarding text => only rotate around the Y-axis
     simulationBodies.forEach((body) => {
       body.textMesh.rotation.y = Math.atan2(
         camera.position.x - body.textMesh.position.x,
@@ -454,21 +435,16 @@ async function initSimulation(
   }
   animationFrameId = requestAnimationFrame(animate);
 
-  // Add event listeners
   window.addEventListener('mousemove', onMouseMove);
   window.addEventListener('click', onClick);
   window.addEventListener('resize', onWindowResize);
 
-  /**
-   * Cleanup function removes listeners & disposes of the scene.
-   */
   return () => {
     window.removeEventListener('mousemove', onMouseMove);
     window.removeEventListener('click', onClick);
     window.removeEventListener('resize', onWindowResize);
     cancelAnimationFrame(animationFrameId);
 
-    // Remove renderer from DOM & dispose
     if (container && rendererRef.current?.domElement) {
       container.removeChild(rendererRef.current.domElement);
     }
@@ -495,7 +471,6 @@ const NBodySimulation: React.FC<NBodySimulationProps> = ({ bodies }) => {
       );
     })();
 
-    // Cleanup
     return () => {
       if (cleanupFn) cleanupFn();
     };
