@@ -285,93 +285,40 @@ async function initSimulation(
     controls.update();
   }
 
-  /**
-   * Zoom in on a specific body and dim the others.
-   */
-  function zoomToSphere(sphere: THREE.Object3D, distance: number, zoomLen: number, radians: number, scene: THREE.Scene, camera: THREE.Camera) {
-    // 1) Compute your "distant point" pivot
-    const c = Math.sqrt(3) * distance / 3;
-    const distantPoint = new THREE.Vector3(c, c, c);
+  function zoomToSphere(body: SimulationBody) {
+    isAnimationPaused = true;
+    isTransitioning = true;
+    transitionStartTime = performance.now();
+    originalCameraPosition = camera.position.clone();
+    originalCameraTarget = controls.target.clone();
 
-    // 2) Just as before, compute two vectors (though typically you’d do cross with (v1, up))
-    const v1 = new THREE.Vector3().subVectors(sphere.position, distantPoint);
-    const v2 = new THREE.Vector3(0, 1, 0).add(distantPoint);
+    // Arbitrary offset & camera distance
+    const SCALE = 4;
+    const offset = new THREE.Vector3(SCALE * 6.11, SCALE * -1.33, SCALE * 7.89);
+    targetCameraTarget = body.position.clone().add(offset);
 
-    // 3) The axis of rotation ("norm"): cross(v1, v2), normalized, then scaled for your initial camera offset
-    const norm = new THREE.Vector3().crossVectors(v1, v2).normalize();
-    norm.multiplyScalar(zoomLen);
-
-    // 4) Place camera at distantPoint + norm
-    camera.position.copy(distantPoint).add(norm);
-    camera.lookAt(distantPoint);
-    
-    // (a) Matrices to translate pivot to origin and back
-    const translateToPivot = new THREE.Matrix4().makeTranslation(
-        -distantPoint.x,
-        -distantPoint.y,
-        -distantPoint.z
-    );
-    const translateBack = new THREE.Matrix4().makeTranslation(
-        distantPoint.x,
-        distantPoint.y,
-        distantPoint.z
-    );
-
-    // (b) Rotation matrix around the axis `norm`
-    // Make sure to use the normalized direction for the axis
-    const rotationAxis = norm.clone().normalize();
-    const rotationMatrix = new THREE.Matrix4().makeRotationAxis(rotationAxis, radians);
-
-    // (c) Start from camera’s current matrix
-    camera.matrix.identity();
-    camera.matrix.compose(camera.position, camera.quaternion, camera.scale);
-
-    // (d) Premultiply the pivot–rotate–unpivot
-    camera.matrix.premultiply(translateToPivot);
-    camera.matrix.premultiply(rotationMatrix);
-    camera.matrix.premultiply(translateBack);
-
-    // (e) Decompose the final matrix back to position/quaternion
-    camera.matrix.decompose(camera.position, camera.quaternion, camera.scale);
-    camera.updateMatrixWorld(true);
+    const offsetDir = offset.clone().normalize();
+    const up = new THREE.Vector3(0, 1, 0);
+    const perpendicular = new THREE.Vector3().crossVectors(offsetDir, up).normalize();
+    const cameraDistance = offset.length();
+    targetCameraPosition = body.position
+      .clone()
+      .add(perpendicular.multiplyScalar(cameraDistance));
 
     // Reduce opacity for other bodies
     simulationBodies.forEach((otherBody) => {
-      if (otherBody.name !== sphere.name) {
-        otherBody.mesh.traverse((child) => {
-          if (child instanceof THREE.Mesh && child.material) {
-            if ((child.material as THREE.MeshBasicMaterial).type === 'MeshBasicMaterial') {
-              (child.material as THREE.MeshBasicMaterial).opacity = 0.1;
-            } else if ('uniforms' in child.material && child.material.uniforms.haloOpacity) {
-              child.material.uniforms.haloOpacity.value = 0.5;
-            }
-          }
-        });
+      if (otherBody.name !== body.name) {
+        otherBody.mesh.visible = false;
       }
     });
-    
-    // -------------------------------------------------
-    // 6) Debug or visualization code (unchanged)
-    // -------------------------------------------------
-    // const planeGeometry = new THREE.PlaneGeometry(50, 50);
-    // const planeMaterial = new THREE.MeshBasicMaterial({
-    //     color: 0xffb6c1,
-    //     transparent: true,
-    //     opacity: 0.3,
-    //     side: THREE.DoubleSide
-    // });
-    // const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-    // plane.position.copy(v1.clone().multiplyScalar(0.5));
-    // plane.lookAt(norm.clone().add(plane.position));
-    // scene.add(plane);
-    // drawVector(ORIGIN, v1, scene, 0x00ff00);
-    // drawVector(ORIGIN, v2, scene, 0x0000ff);
-    // drawVector(v1, norm, scene, 0xff1493);
-    // drawSphere(
-    //     { x: distantPoint.x, y: distantPoint.y, z: distantPoint.z },
-    //     scene
-    // );
-  } 
+
+    // Update the store with the zoomed–in body’s name and coordinates
+    setZoomedInBody(body.name, {
+      x: body.position.x,
+      y: body.position.y,
+      z: body.position.z,
+    });
+  }
 
 
   /**
@@ -388,15 +335,7 @@ async function initSimulation(
     originalCameraTarget = controls.target.clone();
 
     simulationBodies.forEach((body) => {
-      body.mesh.traverse((child) => {
-        if (child instanceof THREE.Mesh && child.material) {
-          if ((child.material as THREE.MeshBasicMaterial).type === 'MeshBasicMaterial') {
-            (child.material as THREE.MeshBasicMaterial).opacity = 0.7;
-          } else if ('uniforms' in child.material && child.material.uniforms.haloOpacity) {
-            child.material.uniforms.haloOpacity.value = 0.5;
-          }
-        }
-      });
+      body.mesh.visible = true;
     });
 
     isAnimationPaused = false;
@@ -457,7 +396,7 @@ async function initSimulation(
       const clickedBody = simulationBodies.find((body) => body.mesh === mesh);
       if (clickedBody) {
         console.log("Clicked body", clickedBody);
-        zoomToSphere(clickedBody, ZOOM_DISTANCE, ZOOM_LEN, ZOOM_RAD, scene, camera);
+        zoomToSphere(clickedBody);
       }
     } else if (isAnimationPaused) {
       resetView();
