@@ -311,12 +311,12 @@ async function initSimulation(
       }
     });
 
-    // Update the store with the zoomed–in body’s name and coordinates
-    setZoomedInBody(body.name, {
-      x: body.position.x,
-      y: body.position.y,
-      z: body.position.z,
-    });
+    // TODO: this doesn't work well
+    // rotate text mesh to face the camera
+    body.textMesh.rotation.y = Math.atan2(
+      targetCameraPosition.x - body.textMesh.position.x,
+      targetCameraPosition.z - body.textMesh.position.z
+    );
   }
 
   /**
@@ -338,7 +338,7 @@ async function initSimulation(
 
     isAnimationPaused = false;
     // Clear the store's zoomed–in body if needed
-    setZoomedInBody('', { x: 0, y: 0, z: 0 });
+    setZoomedInBody(null);
   }
 
   // Create bodies
@@ -393,8 +393,22 @@ async function initSimulation(
       }
       const clickedBody = simulationBodies.find((body) => body.mesh === mesh);
       if (clickedBody) {
-        console.log("Clicked body", clickedBody);
+        console.log("Zooming to body", {
+          name: clickedBody.name,
+          mouseClick: {
+            x: x,
+            y: y,
+          },
+        });
+
         zoomToSphere(clickedBody);
+        setZoomedInBody({
+          name: clickedBody.name,
+          mouseClick: {
+            x: x,
+            y: y,
+          },
+        });
       }
     } else if (isAnimationPaused) {
       resetView();
