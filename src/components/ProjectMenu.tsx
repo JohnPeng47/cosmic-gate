@@ -1,93 +1,122 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNBodyStore, ZoomedInBody, NBodyStore } from '../store/nBodyStore';
 
-const BOX_WIDTH = '30%';
-const BOX_HEIGHT = '30%';
+class BoxRenderer {
+  private element: HTMLDivElement | null = null;
+  private static readonly BOX_WIDTH = "30%";
+  private static readonly BOX_HEIGHT = "30%";
 
-/**
- * ProjectMenu does not return any JSX. Instead, it uses a DOM element
- * to dynamically draw the "mesh paragraph box" when a body is zoomed in.
- */
+  constructor(private container: HTMLElement = document.body) {}
+
+  private createBox(): HTMLDivElement {
+    const box = document.createElement("div");
+
+    box.className = "project-menu";
+    box.style.cssText = `
+      position: absolute;
+      width: ${BoxRenderer.BOX_WIDTH};
+      height: ${BoxRenderer.BOX_HEIGHT};
+      border: 2px solid lightgray;
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 10px;
+      overflow: auto;
+      pointer-events: auto;
+      z-index: 9999;
+      opacity: 0;
+      transform: translateY(-800px);
+      transition: opacity 1s ease, transform 1.2s ease;
+    `;
+
+    return box;
+  }
+
+  private generateContent(body: ZoomedInBody): string {
+    return `
+      <h3>${body.name} Details</h3>
+      <p>
+        This is a paragraph about ${body.name} with a "mesh-like" box.
+        You can put any content you like here: images, text, stats, etc.
+      </p>
+      <p>
+        Mouse Coordinates: (x: ${body.mouseClick.x.toFixed(2)},
+        y: ${body.mouseClick.y.toFixed(2)})
+      </p>
+    `;
+  }
+
+  public update(body: ZoomedInBody | null): void {
+    this.remove();
+
+    if (!body) return;
+
+    // Create and configure new box
+    this.element = this.createBox();
+
+    // First append to DOM so we can get actual dimensions
+    this.container.appendChild(this.element);
+
+    // Now we can get actual pixel dimensions
+    const boxWidth = this.element.offsetWidth;
+    const boxHeight = this.element.offsetHeight;
+
+    // Calculate center position using actual pixel dimensions
+    const centerX = window.innerWidth / 2 - boxWidth / 2;
+    const centerY = window.innerHeight / 2 - boxHeight / 2;
+    
+    // Set position
+    this.element.style.left = `${centerX}px`;
+    this.element.style.top = `${centerY}px`;
+
+    // Set content
+    this.element.innerHTML = this.generateContent(body);
+
+    // Trigger animation
+    requestAnimationFrame(() => {
+      if (this.element) {
+        this.element.style.opacity = "1";
+        this.element.style.transform = "translateY(0)";
+      }
+    });
+  }
+  
+  public remove(): void {
+    if (this.element && this.element.parentNode) {
+      this.element.parentNode.removeChild(this.element);
+      this.element = null;
+    }
+  }
+}
+
 const ProjectMenu: React.FC = () => {
-  // We'll keep a ref to the dynamically created DOM element so we can remove it easily.
-  const boxRef = useRef<HTMLDivElement | null>(null);
-
-  // Local state for current zoomed-in body data (name, x, y).
+  const boxRendererRef = useRef<BoxRenderer | null>(null);
   const [zoomedInBody, setZoomedInBody] = useState<ZoomedInBody | null>(null);
 
-  // Subscribe to store updates once, on mount.
+  // Initialize BoxRenderer on mount
+  useEffect(() => {
+    boxRendererRef.current = new BoxRenderer();
+    
+    return () => {
+      boxRendererRef.current?.remove();
+      boxRendererRef.current = null;
+    };
+  }, []);
+
+  // Subscribe to store updates
   useEffect(() => {
     const unsubscribe = useNBodyStore.subscribe(
       (state: NBodyStore) => {
-        console.log("Body from store", state.zoomedInBody);
         setZoomedInBody(state.zoomedInBody);
       }
     );
     return unsubscribe;
   }, []);
 
+  // Update box when zoomedInBody changes
   useEffect(() => {
-    // If we already have a box in the DOM, remove it before we create/update a new one.
-    if (boxRef.current) {
-      document.body.removeChild(boxRef.current);
-      boxRef.current = null;
-    }
-
-    // If there's no zoomedInBody, do nothing (i.e., remove the box).
-    if (!zoomedInBody) {
-      console.log("No zoomed in body");
-      return;
-    }
-
-    console.log("Zoomed in body", zoomedInBody);
-    // Otherwise, create a new box.
-    const box = document.createElement('div');
-    boxRef.current = box;
-
-    // Basic styling for a “mesh-like” skeleton outline with white text.
-    box.className = 'project-menu';
-    box.style.position = 'absolute';
-    box.style.width = BOX_WIDTH;
-    box.style.height = BOX_HEIGHT;
-    box.style.border = '2px solid lightgray';  // "mesh-like" outline
-    box.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-    box.style.color = 'white';
-    box.style.padding = '10px';
-    box.style.overflow = 'auto';
-    box.style.pointerEvents = 'auto';          // allow interaction
-    box.style.zIndex = '9999';                 // float above your canvas
-
-    // Position the top-left corner at (zoomedInBody.x, zoomedInBody.y).
-    // You can offset this if you want it to appear to the side or above the cursor.
-    box.style.left = `${zoomedInBody.mouseClick.x}px`;
-    box.style.top = `${zoomedInBody.mouseClick.y}px`;
-
-    // Add some placeholder content about the zoomed body.
-    box.innerHTML = `
-      <h3>${zoomedInBody.name} Details</h3>
-      <p>
-        This is a paragraph about ${zoomedInBody.name} with a “mesh-like” box.
-        You can put any content you like here: images, text, stats, etc.
-      </p>
-      <p>
-        Mouse Coordinates: (x: ${zoomedInBody.mouseClick.x.toFixed(2)},
-        y: ${zoomedInBody.mouseClick.y.toFixed(2)})
-      </p>
-    `;
-
-    // Finally, attach the box to the body (or any other container).
-    document.body.appendChild(box);
-
-    // Cleanup: remove the box if component re-renders or unmounts.
-    return () => {
-      if (boxRef.current) {
-        document.body.removeChild(boxRef.current);
-        boxRef.current = null;
-      }
-    };
+    boxRendererRef.current?.update(zoomedInBody);
   }, [zoomedInBody]);
 
-  // Since we're doing DOM manipulation, we return null from React’s standpoint.
   return null;
 };
 

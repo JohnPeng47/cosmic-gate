@@ -61,7 +61,7 @@ async function initSimulation(
     0.1,
     1000
   );
-  camera.position.set(0, 50, 50);
+  camera.position.set(-4.19, 18.12, 42.64);
   camera.lookAt(0, 0, 0);
 
   const fontLoader = new FontLoader();
@@ -262,25 +262,6 @@ async function initSimulation(
     if (progress >= 1) {
       // Camera finished moving
       isTransitioning = false;
-      // If we have a zoomedBodyRef, now is the perfect time to project it
-      if (zoomedBodyRef) {
-        // 1) Use the real camera
-        const finalBodyPos = zoomedBodyRef.position.clone();
-
-        // 2) Convert from 3D to normalized device coords
-        finalBodyPos.project(camera);
-
-        // 3) Convert from -1..+1 to actual screen coordinates
-        const newX = (finalBodyPos.x + 1) * 0.5 * window.innerWidth;
-        const newY = (-finalBodyPos.y + 1) * 0.5 * window.innerHeight;
-
-        setZoomedInBody({
-          name: zoomedBodyRef.name,
-          mouseClick: { x: newX, y: newY },
-        });
-
-        zoomedBodyRef = null; // Clear so we don't do it multiple times
-      }
     }
   }
 
@@ -296,7 +277,6 @@ async function initSimulation(
 
     const SCALE = 4;
     const offsetVec = new THREE.Vector3(SCALE * 6.11, SCALE * -1.33, SCALE * 7.89);
-
     targetCameraTarget = body.position.clone().add(offsetVec);
 
     const offsetDir = offsetVec.clone().normalize();
@@ -369,6 +349,7 @@ async function initSimulation(
   }
 
   function onClick(event: MouseEvent) {
+    console.log(isAnimationPaused, isTransitioning)
     if (isTransitioning) return;
     const { x, y } = transCanvasToWindow(event.clientX, event.clientY, rect);
     mouse.x = (x / window.innerWidth) * 2 - 1;
@@ -390,8 +371,34 @@ async function initSimulation(
         // We do NOT call setZoomedInBody here with projected coords.
         // Instead, we'll do that in updateCameraTransition once the camera is done.
         zoomToSphere(clickedBody);
+
+        // 2) Create a temporary camera that is ALREADY at the final position
+        const tempCam = camera.clone();
+        tempCam.position.copy(targetCameraPosition);
+        tempCam.lookAt(targetCameraTarget);
+        tempCam.updateProjectionMatrix();
+        tempCam.updateMatrixWorld();
+
+        // 3) Project the sphere's position with this final camera
+        const finalPos = clickedBody.position.clone();
+        finalPos.project(tempCam);
+
+        // 4) Convert NDC -> screen coordinates
+        const screenX = (finalPos.x + 1) * 0.5 * window.innerWidth;
+        const screenY = (-finalPos.y + 1) * 0.5 * window.innerHeight;
+  
+        // 5) Immediately tell the store, so UI can animate now
+        setZoomedInBody({
+          name: clickedBody.name,
+          mouseClick: {
+            x: screenX,
+            y: screenY,
+          },
+        });
+        console.log(isAnimationPaused)
       }
     } else if (isAnimationPaused) {
+      console.log("resetView!!");
       resetView();
     }
   }
