@@ -13,6 +13,7 @@ interface NBodySimulationProps {
 
 interface SimulationBody extends SimBody {
   mesh: THREE.Mesh;
+  textMesh: THREE.Mesh;
   haloMaterial: THREE.ShaderMaterial;
 }
 
@@ -20,9 +21,6 @@ interface SimulationBody extends SimBody {
 const G = 2;
 const dt = 0.01;
 const TRANSITION_DURATION = 1000; // in milliseconds
-const ZOOM_DISTANCE = 40;
-const ZOOM_LEN = 20;
-const ZOOM_RAD = 2 * Math.PI;
 
 /**
  * Helper: Translate browser coordinates to canvas coordinates
@@ -214,6 +212,7 @@ async function initSimulation(
     return {
       ...body,
       mesh: sphereMesh,
+      textMesh: textMesh,
       haloMaterial,
     };
   }
@@ -319,7 +318,6 @@ async function initSimulation(
       z: body.position.z,
     });
   }
-
 
   /**
    * Reset camera position/target and restore body opacities.
@@ -431,6 +429,14 @@ async function initSimulation(
     updateCameraDisplay();
     controls.update();
     rendererRef.current!.render(scene, camera);
+
+    // Update all text meshes to face the camera on the y-axis only
+    simulationBodies.forEach((body) => {
+      body.textMesh.rotation.y = Math.atan2(
+        camera.position.x - body.textMesh.position.x,
+        camera.position.z - body.textMesh.position.z
+      );
+    });
   }
   animationFrameId = requestAnimationFrame(animate);
 
