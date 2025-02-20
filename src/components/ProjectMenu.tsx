@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNBodyStore, ZoomedInBody, NBodyStore } from '../store/nBodyStore';
+import { Project } from './bodies';
 
 class BoxRenderer {
   private element: HTMLDivElement | null = null;
-  private static readonly BOX_WIDTH = "30%";
-  private static readonly BOX_HEIGHT = "30%";
+  private static readonly BOX_WIDTH = "50%";
+  private static readonly BOX_HEIGHT = "50%";
 
   constructor(private container: HTMLElement = document.body) {}
 
@@ -31,16 +32,16 @@ class BoxRenderer {
     return box;
   }
 
-  private generateContent(body: ZoomedInBody): string {
+  // Style this tmrw
+  private generateContent(project: Project): string {
     return `
-      <h3>${body.name} Details</h3>
+      <h3>${project.name} Details</h3>
       <p>
-        This is a paragraph about ${body.name} with a "mesh-like" box.
-        You can put any content you like here: images, text, stats, etc.
+        ${project.description}
       </p>
       <p>
-        Mouse Coordinates: (x: ${body.mouseClick.x.toFixed(2)},
-        y: ${body.mouseClick.y.toFixed(2)})
+        ${project.github ? `GitHub: ${project.github}` : ''}
+        ${project.link ? `Link: ${project.link}` : ''}
       </p>
     `;
   }
@@ -69,7 +70,7 @@ class BoxRenderer {
     this.element.style.top = `${centerY}px`;
 
     // Set content
-    this.element.innerHTML = this.generateContent(body);
+    this.element.innerHTML = this.generateContent(body.project);
 
     // Trigger animation
     requestAnimationFrame(() => {
@@ -79,7 +80,7 @@ class BoxRenderer {
       }
     });
   }
-  
+
   public remove(): void {
     if (this.element && this.element.parentNode) {
       this.element.parentNode.removeChild(this.element);

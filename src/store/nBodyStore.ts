@@ -1,7 +1,7 @@
 import { create } from 'zustand';
+import { SimBody } from '../types/simBody'; 
 
-export type ZoomedInBody = {
-  name: string;
+export type ZoomedInBody = SimBody & {
   mouseClick: {
     x: number;
     y: number;

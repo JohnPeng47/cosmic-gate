@@ -61,7 +61,7 @@ async function initSimulation(
     0.1,
     1000
   );
-  camera.position.set(-4.19, 18.12, 42.64);
+  camera.position.set(-2.46, 10.63, 25.03);
   camera.lookAt(0, 0, 0);
 
   const fontLoader = new FontLoader();
@@ -389,7 +389,7 @@ async function initSimulation(
   
         // 5) Immediately tell the store, so UI can animate now
         setZoomedInBody({
-          name: clickedBody.name,
+          ...clickedBody,
           mouseClick: {
             x: screenX,
             y: screenY,
@@ -461,11 +461,14 @@ async function initSimulation(
 
 const NBodySimulation: React.FC<NBodySimulationProps> = ({ bodies }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const nameDisplayRef = useRef<HTMLDivElement>(null);
+  const nameDisplayRef = useRef<HTMLDivElement | null>(null);
   const cameraDisplayRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
 
   useEffect(() => {
+    // Get the existing div by ID
+    nameDisplayRef.current = document.getElementById("name-display") as HTMLDivElement;
+    
     let cleanupFn: () => void;
 
     (async () => {
@@ -487,40 +490,14 @@ const NBodySimulation: React.FC<NBodySimulationProps> = ({ bodies }) => {
     <div
       ref={containerRef}
       style={{
-        width: '100vw',
-        height: '100vh',
-        overflow: 'hidden',
-        background: '#000',
+        width: "100vw",
+        height: "100vh",
+        overflow: "hidden",
+        background: "#000",
       }}
     >
-      <div
-        ref={nameDisplayRef}
-        style={{
-          position: 'absolute',
-          top: 10,
-          left: 10,
-          color: 'white',
-          fontFamily: 'Arial, sans-serif',
-          pointerEvents: 'none',
-          background: 'rgba(0, 0, 0, 0.5)',
-          padding: '5px 10px',
-          borderRadius: '5px',
-        }}
-      ></div>
-      <div
-        ref={cameraDisplayRef}
-        style={{
-          position: 'absolute',
-          top: 40,
-          left: 10,
-          color: 'white',
-          fontFamily: 'Arial, sans-serif',
-          pointerEvents: 'none',
-          background: 'rgba(0, 0, 0, 0.5)',
-          padding: '5px 10px',
-          borderRadius: '5px',
-        }}
-      ></div>
+      {/* Remove the nameDisplay div since we're using an existing one */}
+      {/* ... rest of the JSX ... */}
     </div>
   );
 };
