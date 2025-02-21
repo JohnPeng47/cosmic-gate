@@ -1,5 +1,5 @@
 .nameContainer {
-    font-family: "Roboto Mono", "Vazirmatn", monospace;
+    font-family: "Futura PT", sans-serif;
     font-size: 80px;
     font-weight: 500;
     color: #c5bfbf;
@@ -19,7 +19,7 @@
 } 
 
 .titleContainer {
-    font-family: "Roboto Mono", "Vazirmatn", monospace;
+    font-family: "Futura PT", sans-serif;
     font-size: 65px;
     font-weight: 500;
     color: #c5bfbf;
