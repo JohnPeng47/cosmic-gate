@@ -1,5 +1,5 @@
 .nameContainer {
-    font-family: "Futura PT", sans-serif;
+    font-family: "Roboto Mono", "Vazirmatn", monospace;
     font-size: 80px;
     font-weight: 500;
     color: #c5bfbf;
@@ -19,10 +19,19 @@
 } 
 
 .titleContainer {
-    font-family: "Futura PT", sans-serif;
+    font-family: "Roboto Mono", "Vazirmatn", monospace;
     font-size: 65px;
     font-weight: 500;
     color: #c5bfbf;
     line-height: 1.0;
     padding: 8px 0;
+}
+
+.nameContainer, .titleContainer {
+  opacity: 1;
+  transition: opacity 0.5s ease-in-out;
+}
+
+.fadeOut {
+  opacity: 0;
 }

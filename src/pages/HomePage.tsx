@@ -2,8 +2,26 @@ import { Box } from '@mui/material';
 import SimComponent from '../components/simComponent';
 import ProjectMenu from '../components/ProjectMenu';
 import styles from './HomePage.module.css';
+import { useNBodyStore } from "../store/nBodyStore"
+
 
 const HomePage = () => {
+  // TODO: using this here causes zoomInSphere animation to stop working
+  // const zoomedInBody = useNBodyStore((state) => state.zoomedInBody)
+  
+  // useEffect(() => {
+  //   const nameContainer = document.querySelector(`.${styles.nameContainer}`)
+  //   const titleContainer = document.querySelector(`.${styles.titleContainer}`)
+    
+  //   if (zoomedInBody) {
+  //     nameContainer?.classList.add(styles.fadeOut)
+  //     titleContainer?.classList.add(styles.fadeOut)
+  //   } else {
+  //     nameContainer?.classList.remove(styles.fadeOut)
+  //     titleContainer?.classList.remove(styles.fadeOut)
+  //   }
+  // }, [zoomedInBody])
+  
   return (
     <Box sx={{ flexGrow: 1, height: "100vh", display: "flex", flexDirection: "column" }}>
       {/* Main Content */}

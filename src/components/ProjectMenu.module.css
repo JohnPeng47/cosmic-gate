@@ -1,0 +1,83 @@
+:root {
+  --box-width: 400px;  /* Replace with BoxRenderer.BOX_WIDTH value */
+  --box-height: 300px; /* Replace with BoxRenderer.BOX_HEIGHT value */
+}
+
+.projectDetails {
+  padding: 20px;
+  color: white;
+  background-color: rgba(0, 0, 0, 0.8);
+  border-radius: 8px;
+}
+
+.projectDetails h3 {
+  margin: 0 0 16px 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.projectDetails p {
+  margin: 12px 0;
+  line-height: 1.5;
+}
+
+.projectLinks {
+  display: flex;
+  gap: 16px;
+  margin: 16px;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+}
+
+.projectLinks a {
+  color: #64b5f6;
+  text-decoration: none;
+}
+
+.projectLinks a:hover {
+  text-decoration: underline;
+}
+
+.projectBox {
+  --box-width: 50%;
+  --box-height: 50%;
+  font-family: "Roboto Mono", "Vazirmatn", monospace;
+  position: absolute;
+  width: var(--box-width);
+  height: var(--box-height);
+  border: 2px solid lightgray;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 10px;
+  overflow: auto;
+  pointer-events: auto;
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(-800px);
+  transition: opacity 1s ease, transform 1.2s ease;
+}
+
+/* Tablet */
+@media screen and (min-width: 768px) {
+  .projectBox {
+    --box-width: 70%;
+    --box-height: 60%;
+  }
+}
+
+/* Desktop */
+@media screen and (min-width: 1024px) {
+  .projectBox {
+    --box-width: 40%;
+    --box-height: 60%;
+  }
+}
+
+/* Large Desktop */
+@media screen and (min-width: 1440px) {
+  .projectBox {
+    --box-width: 35%;
+    --box-height: 60%;
+  }
+}

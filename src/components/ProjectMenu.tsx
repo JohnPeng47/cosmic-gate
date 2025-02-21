@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNBodyStore, ZoomedInBody, NBodyStore } from '../store/nBodyStore';
 import { Project } from './bodies';
+import { insertElement } from './utils';
+import styles from "./ProjectMenu.module.css"
 
 class BoxRenderer {
   private element: HTMLDivElement | null = null;
@@ -10,39 +12,26 @@ class BoxRenderer {
   constructor(private container: HTMLElement = document.body) {}
 
   private createBox(): HTMLDivElement {
-    const box = document.createElement("div");
-
-    box.className = "project-menu";
-    box.style.cssText = `
-      position: absolute;
-      width: ${BoxRenderer.BOX_WIDTH};
-      height: ${BoxRenderer.BOX_HEIGHT};
-      border: 2px solid lightgray;
-      background-color: rgba(0, 0, 0, 0.8);
-      color: white;
-      padding: 10px;
-      overflow: auto;
-      pointer-events: auto;
-      z-index: 9999;
-      opacity: 0;
-      transform: translateY(-800px);
-      transition: opacity 1s ease, transform 1.2s ease;
-    `;
-
+    const box = insertElement<HTMLDivElement>(`
+      <div class="${styles.projectBox}" onclick="event.stopPropagation()">
+      </div>
+    `);
     return box;
   }
 
   // Style this tmrw
   private generateContent(project: Project): string {
     return `
-      <h3>${project.name} Details</h3>
-      <p>
-        ${project.description}
-      </p>
-      <p>
-        ${project.github ? `GitHub: ${project.github}` : ''}
-        ${project.link ? `Link: ${project.link}` : ''}
-      </p>
+      <div class="${styles.projectDetails}">
+        <h3>${project.name} Details</h3>
+        <p>
+          ${project.description}
+        </p>
+        <div class="${styles.projectLinks}">
+          ${project.github ? `<a href="${project.github}" target="_blank">GitHub</a>` : ''}
+          ${project.link ? `<a href="${project.link}" target="_blank">View Project</a>` : ''}
+        </div>
+      </div>
     `;
   }
 

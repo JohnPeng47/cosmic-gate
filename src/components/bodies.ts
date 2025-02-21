@@ -8,10 +8,9 @@ export interface Project {
 const TOPIC_EXPLORER: Project = {
   name: "Topic Explorer",
   description: `
-A novel tree-based UI for exploring nested topics
-- uses only a single prompt to recursively generate topics for any user search query
-- each branch subsequent branch of the tree inherits the previously generated entry as 
-its context, allowing it to expand deeper into more relevant`,
+A novel tree-based UI for exploring nested topics<br>
+- uses only a single prompt to recursively generate topics for any user search query<br>
+- each subsequent branch of the tree inherits the previously generated entry as its context, allowing it to expand deeper into more relevant`,
   github: "https://github.com/JohnPeng47/TopicExplorer",
   link: "https://cowboy.rocks/TopicExplorer"
 }
